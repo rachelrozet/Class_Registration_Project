@@ -1,0 +1,315 @@
+// Programmer: Rachel Rozet
+// project: Assignment 4
+// Date: 11/29/2021
+// Description: Create data entry form for Hopkins Film School Class Registration
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.IO; // Add namescape to allow use of StreamReader class
+
+namespace Rozet_4
+{
+    public partial class RegistrationForm : Form
+    {
+        // Declare class-level constants
+        private const decimal LIVE_ACTION_PRICE = 79.97m;
+        private const decimal ANIMATION_PRICE = 99.95m;
+
+        // Declare class-level variables to be included in calculations
+        private decimal total = 0m;
+        private string paymentType = "";
+        private string emailReceipt = "";
+        // Declare array to populate Status Combo Box
+        string[] statusArray = {"", "Actor", "Producer", "Director", "Animator", "Cinematographer",
+                "Drama Teacher", "Light Technician", "Sound Technician"};
+
+        public RegistrationForm()
+        {
+            InitializeComponent();
+        }
+
+        // Execute immediately upon program startup
+        private void RegistrationForm_Load(object sender, EventArgs e)
+        {
+            // Display current date (reported by system clock) in date control
+            dateMaskedTextBox.Text = DateTime.Now.ToString("MM/dd/yyyy");
+
+            // Set Live Action Radio Button as Default
+            liveActionRadioButton.Checked = true;
+
+            // Set Cash Radio Button as Default
+            cashRadioButton.Checked = true;
+            paymentType = "Cash";
+
+            // Call custom method to Populate Boxes
+            PopulateBoxes();
+        }
+
+        // Handle Live Action Radio Button CheckedChanged Event
+        private void liveActionRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            PopulateBoxes();
+            classesListBox.SelectedIndex = 0;
+            UpdateTotals();
+        }
+
+        // Handle Animation Radio Button CheckedChanged Event
+
+        private void animationRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            PopulateBoxes();
+            classesListBox.SelectedIndex = 0;
+            UpdateTotals();
+        }
+
+        // Handle Classes List Box Selected Index Change Event
+        private void classesListBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateTotals();
+        }
+
+        // Handle Cash Radio Button Click Event
+        private void cashRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            if(cashRadioButton.Checked)
+            {
+                paymentType = "Cash";
+            }
+            else if (checkRadioButton.Checked)
+            {
+                paymentType = "Check";
+            }
+        }
+
+        // Handle Email Receipt Check Box Click Event
+        private void emailCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (emailCheckBox.Checked)
+            {
+                emailReceipt = "Yes";
+            }
+            else
+            {
+                emailReceipt = "No";
+            }
+        }
+
+        // Handle Save Menu Item Click Event
+        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string selectedClasses = "";
+            foreach (object selectedItem in classesListBox.SelectedItems)
+            {
+                selectedClasses += (selectedItem.ToString() + Environment.NewLine);
+            }
+
+            // Declare Message Box entry variables for when data CAN be displayed in summary
+            string summaryMessage = "Registration Summary" + Environment.NewLine +
+                "Registrant Date: " + dateMaskedTextBox.Text + Environment.NewLine +
+                "Name: " + firstNameTextBox.Text + " " + lastNameTextBox.Text + Environment.NewLine +
+                "Email: " + emailTextBox.Text + Environment.NewLine +
+                "Date of Birth: " + dobMaskedTextBox.Text + Environment.NewLine +
+                "Registrant Status: " + statusComboBox.Text + Environment.NewLine +
+                "Number of Classes Selected: " + classesListBox.SelectedItems.Count.ToString() + Environment.NewLine +
+                "Classes Selected: " + Environment.NewLine + selectedClasses +
+                "Price per Class: " + pricePerClassLabel.Text + Environment.NewLine +
+                "Total Price: " + totalPriceLabel.Text + Environment.NewLine +
+                "Payment Type: " + paymentType + Environment.NewLine +
+                "Email Receipt Requested: " + emailReceipt + Environment.NewLine;
+
+            string summaryTitle = "Registration Summary";
+            MessageBoxButtons summaryButtons = MessageBoxButtons.OK;
+            MessageBoxIcon summaryIcon = MessageBoxIcon.Information;
+
+            // Declare Message Box entry variables for when data CANNOT be displayed in summary
+            string summaryErrorMessage = "Registration Error" + Environment.NewLine +
+                "Either of the following has occurred: " + Environment.NewLine +
+                "First name, last name, or email address has been left blank." + Environment.NewLine +
+                "Date of birth entry is incomplete." + Environment.NewLine +
+                "Please enter the required information to register.";
+            string summaryErrorTitle = "Error";
+            MessageBoxButtons summaryErrorButtons = MessageBoxButtons.OK;
+            MessageBoxIcon summaryIconError = MessageBoxIcon.Error;
+
+            // Declare Message Box entry variables for when 0 or more than 4 classes have been selected
+            string classesErrorMessage = "Registration Error" + Environment.NewLine +
+                "One to four classes must be selected to register." + Environment.NewLine +
+                "If none or more than four classes are selected, registration will fail." + Environment.NewLine +
+                "Please reenter data and try again.";
+            string classesErrorTitle = "Error";
+            MessageBoxButtons classesErrorButtons = MessageBoxButtons.OK;
+            MessageBoxIcon classesErrorIcon = MessageBoxIcon.Error;
+
+            // If Registrant's First/Last Name, Email, or DOB is not entered, show Error Message
+            if (string.IsNullOrEmpty(firstNameTextBox.Text) || string.IsNullOrEmpty(lastNameTextBox.Text) || string.IsNullOrEmpty(emailTextBox.Text) || string.IsNullOrEmpty(dobMaskedTextBox.Text))
+            {
+                DialogResult summaryResult = MessageBox.Show(summaryErrorMessage, summaryErrorTitle, summaryErrorButtons, summaryIconError);
+                ResetForm();
+            }
+            // If all necessary information is entered, show Order Summary
+            else if (classesListBox.SelectedItems.Count >= 1 && classesListBox.SelectedItems.Count <= 4)
+            {
+                DialogResult summaryResult = MessageBox.Show(summaryMessage, summaryTitle, summaryButtons, summaryIcon);
+                ResetForm();
+            }
+            else
+            {
+                DialogResult summaryResult = MessageBox.Show(classesErrorMessage, classesErrorTitle, classesErrorButtons, classesErrorIcon);
+                ResetForm();
+            }
+
+            // Send Registration Summary to Output File
+            try
+            {
+                StreamWriter outputFile; // Declare object 
+                outputFile = File.CreateText("RegistrationData.txt"); // Open file
+                outputFile.WriteLine(summaryMessage); // Write registration summary in file
+                outputFile.Close(); // Close file
+            }
+            catch (Exception ex)
+            {
+                // Display default message for error
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        // Handle Exit Menu Item Click Event
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string message = "Are you sure you want to quit?";
+            string title = "Close Window";
+            MessageBoxButtons buttons = MessageBoxButtons.YesNo;
+            MessageBoxIcon icon = MessageBoxIcon.Question;
+            DialogResult result = MessageBox.Show(message, title, buttons, icon);
+            if (result == DialogResult.Yes)
+            {
+                this.Close();
+            }
+            else
+            {
+                // Leave form open
+            }
+        }
+
+        // Handle Clear Menu Item Click Event
+        private void clearToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ResetForm();
+        }
+
+        // Handle About Menu Item Click Event
+        // Load AboutForm
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            // Create an instane of the AboutForm form class
+            AboutForm myAboutForm = new AboutForm();
+
+            // Display About Form instance as a modal form
+            myAboutForm.ShowDialog();
+        }
+
+
+
+        // Custom method to Update Totals
+        private void UpdateTotals()
+        {
+            // Reset Total whenever CheckedChanged event occurs
+            total = 0m;
+                        
+            // Calculate Class Price
+            if(liveActionRadioButton.Checked)
+            {
+                total = classesListBox.SelectedItems.Count * LIVE_ACTION_PRICE;
+            }
+            else if (animationRadioButton.Checked)
+            {
+                total = classesListBox.SelectedItems.Count * ANIMATION_PRICE;
+            }
+
+            // Fill summary labels with registration information
+            numClassesLabel.Text = classesListBox.SelectedItems.Count.ToString();
+
+            if (liveActionRadioButton.Checked)
+            {
+                pricePerClassLabel.Text = LIVE_ACTION_PRICE.ToString("c");
+            }
+            else if (animationRadioButton.Checked)
+            {
+                pricePerClassLabel.Text = ANIMATION_PRICE.ToString("c");
+            }
+
+            totalPriceLabel.Text = total.ToString("c");
+        }
+
+        // Custom method to Populate List Box with appropriate classes
+        private void PopulateBoxes()
+        {
+            // Populate Status Combo Box with values from array
+            BindingSource theBindingSource = new BindingSource();
+            theBindingSource.DataSource = statusArray;
+            statusComboBox.DataSource = theBindingSource.DataSource;
+
+            // Read options in Classes List Box from input file
+            StreamReader inputFile; // Declare object
+            try
+            {
+                // If Live Action is Checked, populate List Box with Live Action Classes
+                if(liveActionRadioButton.Checked)
+                {
+                    classesListBox.Items.Clear(); // Clear any existing items from the list
+                    inputFile = File.OpenText("LiveActionClasses.txt"); // Open File
+                    while (!inputFile.EndOfStream) // Verify that more data exists
+                    {
+                        // Read a line from the input file and add it to the list box
+                        classesListBox.Items.Add(inputFile.ReadLine());
+                    }
+                    inputFile.Close(); // Close file
+                }
+                // If Animation is checked, populate List Box with Animation Classes
+                else if (animationRadioButton.Checked)
+                {
+                    classesListBox.Items.Clear(); // Clear any existing items from the list
+                    inputFile = File.OpenText("AnimationClasses.txt"); // Open File
+                    while (!inputFile.EndOfStream) // Verify that more data exists
+                    {
+                        // Read a line from the input file and add it to the list box
+                        classesListBox.Items.Add(inputFile.ReadLine());
+                    }
+                    inputFile.Close(); // Close file
+                }
+            }
+            catch (Exception ex)
+            {
+                // Display message if error occurs when attempting to read file
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        // Custom method to Reset Form
+        private void ResetForm()
+        {
+            total = 0m;
+            dateMaskedTextBox.Text = DateTime.Now.ToString("MM/dd/yyyy");
+            liveActionRadioButton.Checked = true;
+            cashRadioButton.Checked = true;
+            classesListBox.SelectedIndex = 0;
+            firstNameTextBox.Text = "";
+            lastNameTextBox.Text = "";
+            emailTextBox.Text = "";
+            dobMaskedTextBox.Text = "";
+            statusComboBox.SelectedText = "";
+            numClassesLabel.Text = "";
+            pricePerClassLabel.Text = "";
+            totalPriceLabel.Text = "";
+            emailCheckBox.Checked = false;
+            dateMaskedTextBox.Focus();
+        }
+
+    }
+}
